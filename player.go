@@ -51,6 +51,10 @@ type TheShipPlayer struct {
 }
 
 func (c *Client) QueryPlayer() (*PlayerInfo, error) {
+	return queryPlayer(c, []byte{0xFF, 0xFF, 0xFF, 0xFF})
+}
+
+func queryPlayer(c *Client, code []byte) (*PlayerInfo, error) {
 	/*
 		A2S_PLAYER
 
@@ -66,7 +70,9 @@ func (c *Client) QueryPlayer() (*PlayerInfo, error) {
 		FF FF FF FF 55 4B A1 D5 22                         ÿÿÿÿUÿÿÿÿ"
 	*/
 
-	playerRequest := []byte{0xFF, 0xFF, 0xFF, 0xFF, A2S_PLAYER_REQUEST, 0xFF, 0xFF, 0xFF, 0xFF}
+	playerRequest := []byte{0xFF, 0xFF, 0xFF, 0xFF, A2S_PLAYER_REQUEST}
+	playerRequest = append(playerRequest, code...)
+
 	data, immediate, err := c.getChallenge(playerRequest, A2S_PLAYER_RESPONSE)
 
 	if err != nil {
@@ -74,19 +80,7 @@ func (c *Client) QueryPlayer() (*PlayerInfo, error) {
 	}
 
 	if !immediate {
-		if err := c.send([]byte{
-			0xff, 0xff, 0xff, 0xff,
-			A2S_PLAYER_REQUEST,
-			data[0], data[1], data[2], data[3],
-		}); err != nil {
-			return nil, err
-		}
-
-		data, err = c.receive()
-
-		if err != nil {
-			return nil, err
-		}
+		return queryPlayer(c, data)
 	}
 
 	// Read header (long 4 bytes)

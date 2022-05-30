@@ -98,6 +98,10 @@ type SourceTVInfo struct {
 }
 
 func (c *Client) QueryInfo() (*ServerInfo, error) {
+	return queryInfo(c, nil)
+}
+
+func queryInfo(c *Client, code []byte) (*ServerInfo, error) {
 	var builder PacketBuilder
 
 	/*
@@ -111,6 +115,10 @@ func (c *Client) QueryInfo() (*ServerInfo, error) {
 
 	builder.WriteCString("Source Engine Query")
 
+	if code != nil {
+		builder.WriteBytes(code)
+	}
+
 	data, immediate, err := c.getChallenge(builder.Bytes(), A2S_INFO_RESPONSE)
 
 	if err != nil {
@@ -118,16 +126,7 @@ func (c *Client) QueryInfo() (*ServerInfo, error) {
 	}
 
 	if !immediate {
-		builder.WriteBytes(data)
-		if err := c.send(builder.Bytes()); err != nil {
-			return nil, err
-		}
-
-		data, err = c.receive()
-
-		if err != nil {
-			return nil, err
-		}
+		return queryInfo(c, data)
 	}
 
 	/*

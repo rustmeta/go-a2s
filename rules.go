@@ -28,6 +28,10 @@ type Rule struct {
 }
 
 func (c *Client) QueryRules() (*RulesInfo, error) {
+	return queryRules(c, []byte{0xFF, 0xFF, 0xFF, 0xFF})
+}
+
+func queryRules(c *Client, code []byte) (*RulesInfo, error) {
 	/*
 		A2S_RULES
 
@@ -43,7 +47,9 @@ func (c *Client) QueryRules() (*RulesInfo, error) {
 		FF FF FF FF 56 4B A1 D5 22                         ÿÿÿÿVK¡Õ"
 	*/
 
-	ruleRequest := []byte{0xFF, 0xFF, 0xFF, 0xFF, A2S_RULES_REQUEST, 0xFF, 0xFF, 0xFF, 0xFF}
+	ruleRequest := []byte{0xFF, 0xFF, 0xFF, 0xFF, A2S_RULES_REQUEST}
+	ruleRequest = append(ruleRequest, code...)
+
 	data, immediate, err := c.getChallenge(ruleRequest, A2S_RULES_RESPONSE)
 
 	if err != nil {
@@ -51,19 +57,7 @@ func (c *Client) QueryRules() (*RulesInfo, error) {
 	}
 
 	if !immediate {
-		if err := c.send([]byte{
-			0xff, 0xff, 0xff, 0xff,
-			A2S_RULES_REQUEST,
-			data[0], data[1], data[2], data[3],
-		}); err != nil {
-			return nil, err
-		}
-
-		data, err = c.receive()
-
-		if err != nil {
-			return nil, err
-		}
+		return queryRules(c, data)
 	}
 
 	// Read header (long 4 bytes)
